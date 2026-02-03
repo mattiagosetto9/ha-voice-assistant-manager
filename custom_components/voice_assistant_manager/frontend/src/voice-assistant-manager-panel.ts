@@ -469,7 +469,6 @@ export class VoiceAssistantManagerPanel extends LitElement {
 
     const config = this._getCurrentFilterConfig();
     const aliases = this._getCurrentAliases();
-    const ent_reg = this.hass.states;
 
     if (action === 'exclude') {
       const current_entities = new Set(config.entities || []);
@@ -487,15 +486,14 @@ export class VoiceAssistantManagerPanel extends LitElement {
       const current_overrides = new Set(config.overrides || []);
       this._selectedEntities.forEach(id => current_overrides.delete(id));
       config.overrides = Array.from(current_overrides);
-    } else if (action === 'set_alias_prefix' || action === 'set_alias_suffix') {
+    } else if (action === 'set_alias') {
+      // Imposta lo stesso alias per tutte le entità selezionate
+      if (!this._bulkActionValue.trim()) {
+        alert(this._t('aliasRequired') || 'Please enter an alias');
+        return;
+      }
       this._selectedEntities.forEach(entityId => {
-        const state = ent_reg[entityId];
-        const name = state?.attributes?.friendly_name || entityId;
-        if (action === 'set_alias_prefix') {
-          aliases[entityId] = `${this._bulkActionValue}${name}`;
-        } else {
-          aliases[entityId] = `${name}${this._bulkActionValue}`;
-        }
+        aliases[entityId] = this._bulkActionValue.trim();
       });
     } else if (action === 'clear_alias') {
       this._selectedEntities.forEach(entityId => {
@@ -1238,26 +1236,62 @@ export class VoiceAssistantManagerPanel extends LitElement {
   }
 
   private _renderBulkActions(): TemplateResult {
+    // Calcola lo stato delle entità selezionate
+    const entities = this._state?.entities || [];
+    const selectedEntitiesData = entities.filter(e => this._selectedEntities.includes(e.entity_id));
+    const aliases = this._getCurrentAliases();
+    
+    // Conta quante sono esposte/nascoste
+    const exposedCount = selectedEntitiesData.filter(e => this._isEntityExposed(e).exposed).length;
+    const hiddenCount = selectedEntitiesData.length - exposedCount;
+    
+    // Conta quante hanno override
+    const config = this._getCurrentFilterConfig();
+    const overrides = new Set(config.overrides || []);
+    const withOverride = selectedEntitiesData.filter(e => overrides.has(e.entity_id)).length;
+    const withoutOverride = selectedEntitiesData.length - withOverride;
+    
+    // Conta quante hanno alias
+    const withAlias = selectedEntitiesData.filter(e => aliases[e.entity_id]).length;
+    
     return html`
       <div class="bulk-actions">
         <span class="count">${this._selectedEntities.length} ${this._t('selectedCount')}</span>
-        <select id="bulkAction">
+        <select id="bulkAction" @change=${(e: Event) => {
+          const value = (e.target as HTMLSelectElement).value;
+          // Mostra/nascondi input basato sull'azione
+          const input = this.shadowRoot?.querySelector('.bulk-value-input') as HTMLInputElement;
+          if (input) {
+            input.style.display = value === 'set_alias' ? 'inline-block' : 'none';
+          }
+        }}>
           <option value="">${this._t('selectAction')}</option>
-          <option value="exclude">${this._t('addToExclusions')}</option>
-          <option value="unexclude">${this._t('removeFromExclusions')}</option>
-          <option value="add_override">${this._t('addOverride')}</option>
-          <option value="remove_override">${this._t('removeOverride')}</option>
-          <option value="exclude_domain">${this._t('excludeDomain')}</option>
-          <option value="exclude_device">${this._t('excludeDevice')}</option>
-          <option value="set_alias_prefix">${this._t('addAliasPrefix')}</option>
-          <option value="set_alias_suffix">${this._t('addAliasSuffix')}</option>
-          <option value="clear_alias">${this._t('clearAlias')}</option>
+          ${hiddenCount > 0 ? html`
+            <option value="unexclude">✓ ${this._t('expose')} (${hiddenCount})</option>
+          ` : ''}
+          ${exposedCount > 0 ? html`
+            <option value="exclude">✗ ${this._t('hide')} (${exposedCount})</option>
+          ` : ''}
+          ${withoutOverride > 0 ? html`
+            <option value="add_override">+ ${this._t('addOverride')} (${withoutOverride})</option>
+          ` : ''}
+          ${withOverride > 0 ? html`
+            <option value="remove_override">− ${this._t('removeOverride')} (${withOverride})</option>
+          ` : ''}
+          <option value="exclude_domain">⚠️ ${this._t('excludeWholeDomain')}</option>
+          <option value="exclude_device">⚠️ ${this._t('excludeWholeDevice')}</option>
+          <option value="set_alias">✏️ ${this._t('setAlias')}</option>
+          ${withAlias > 0 ? html`
+            <option value="clear_alias">🗑️ ${this._t('clearAlias')} (${withAlias})</option>
+          ` : ''}
         </select>
         <input
           type="text"
-          placeholder="${this._t('valuePlaceholder')}"
+          class="bulk-value-input"
+          placeholder="${this._t('aliasValuePlaceholder')}"
           .value=${this._bulkActionValue}
           @input=${(e: Event) => (this._bulkActionValue = (e.target as HTMLInputElement).value)}
+          style="display: none;"
         />
         <button
           @click=${() => {

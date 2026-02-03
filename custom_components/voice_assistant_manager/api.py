@@ -460,8 +460,7 @@ async def websocket_set_alias(
             [
                 "exclude",
                 "unexclude",
-                "set_alias_prefix",
-                "set_alias_suffix",
+                "set_alias",
                 "clear_alias",
                 "exclude_domain",
                 "exclude_device",
@@ -518,28 +517,11 @@ async def websocket_bulk_update(
             config["overrides"] = list(current_overrides)
             await storage.async_set_filter_config(config, assistant)
 
-        elif action == "set_alias_prefix":
-            ent_reg = er.async_get(hass)
-            new_aliases = {}
-            for entity_id in entity_ids:
-                entity = ent_reg.async_get(entity_id)
-                if entity:
-                    state = hass.states.get(entity_id)
-                    name = state.attributes.get("friendly_name") if state else None
-                    name = name or entity.name or entity.original_name or entity_id
-                    new_aliases[entity_id] = f"{value}{name}"
-            await storage.async_set_aliases_bulk(new_aliases, assistant)
-
-        elif action == "set_alias_suffix":
-            ent_reg = er.async_get(hass)
-            new_aliases = {}
-            for entity_id in entity_ids:
-                entity = ent_reg.async_get(entity_id)
-                if entity:
-                    state = hass.states.get(entity_id)
-                    name = state.attributes.get("friendly_name") if state else None
-                    name = name or entity.name or entity.original_name or entity_id
-                    new_aliases[entity_id] = f"{name}{value}"
+        elif action == "set_alias":
+            # Set the same alias for all selected entities
+            if not value or not value.strip():
+                raise ValidationError("Alias value is required")
+            new_aliases = {entity_id: value.strip() for entity_id in entity_ids}
             await storage.async_set_aliases_bulk(new_aliases, assistant)
 
         elif action == "clear_alias":
