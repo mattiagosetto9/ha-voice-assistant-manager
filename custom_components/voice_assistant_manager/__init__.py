@@ -139,7 +139,7 @@ async def _async_register_panel(hass: HomeAssistant) -> None:
 
     # Register static path
     await hass.http.async_register_static_paths(
-        [StaticPathConfig("/voice-assistant-manager", str(www_path), cache_headers=False)]
+        [StaticPathConfig(f"/api/{DOMAIN}", str(www_path), cache_headers=False)]
     )
 
     # Register panel (admin only for security)
@@ -154,7 +154,7 @@ async def _async_register_panel(hass: HomeAssistant) -> None:
                 "name": "voice-assistant-manager-panel",
                 "embed_iframe": False,
                 "trust_external": False,
-                "module_url": "/voice-assistant-manager/voice-assistant-manager-panel.js",
+                "module_url": f"/api/{DOMAIN}/voice-assistant-manager-panel.js",
             }
         },
         require_admin=True,  # Security: Only admin users can access
