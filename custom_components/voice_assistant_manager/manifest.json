@@ -1,0 +1,13 @@
+{
+  "domain": "voice_assistant_manager",
+  "name": "Voice Assistant Manager",
+  "codeowners": ["@mattiagosetto9"],
+  "config_flow": true,
+  "dependencies": ["frontend", "http"],
+  "documentation": "https://github.com/mattiagosetto9/ha-voice-assistant-manager",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/mattiagosetto9/ha-voice-assistant-manager/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

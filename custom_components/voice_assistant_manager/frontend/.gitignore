@@ -1,0 +1,2 @@
+node_modules/
+# dist/ NON viene ignorato - deve essere committato per HACS

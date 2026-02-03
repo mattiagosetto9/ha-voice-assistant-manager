@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Voice Assistant Manager",
+        "description": "This will add the Voice Assistant Manager panel to your sidebar. The panel allows you to manage Google Assistant and Alexa exposure for your entities.",
+        "data": {}
+      }
+    },
+    "abort": {
+      "already_configured": "Voice Assistant Manager is already configured."
+    },
+    "error": {
+      "unknown": "An unexpected error occurred."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Voice Assistant Manager Options",
+        "description": "All settings are managed through the Voice Assistant Manager panel in the sidebar."
+      }
+    }
+  }
+}

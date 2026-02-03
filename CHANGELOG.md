@@ -1,0 +1,45 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2026-02-03
+
+### Added
+
+- Initial release
+- Sidebar panel for managing voice assistant entity exposure
+- Support for **Google Assistant**, **Amazon Alexa**, and **Apple HomeKit**
+- Flexible filter modes: **Exclude** (default) or **Include** workflow
+- **Linked mode**: Share settings between all assistants
+- **Separate mode**: Manage each assistant independently
+- Domain-level control with per-entity overrides
+- Voice alias support for custom entity names
+- Bulk operations (exclude, include, prefix, suffix, clear alias)
+- YAML package generation for Google Assistant and Alexa
+- Direct HomeKit Bridge configuration sync
+- Preview YAML before writing
+- Configuration check and restart buttons
+- Admin-only panel access
+- Multi-language support (English, Italian)
+
+### Technical
+
+- Frontend built with TypeScript and Lit 3.x (bundled, no CDN)
+- Modular code structure (styles, locales, types separated)
+- Automated CI/CD pipelines:
+  - HACS and Hassfest validation
+  - Python linting with Ruff
+  - TypeScript validation and build
+  - Automatic bundle rebuild on source changes
+  - Release automation with versioned zip files
+
+### Security
+
+- All WebSocket endpoints require admin privileges
+- Input validation and sanitization on all fields
+- Path traversal prevention for file operations
+- Dangerous YAML patterns blocked
+- Service account path restricted to `/config/` directory

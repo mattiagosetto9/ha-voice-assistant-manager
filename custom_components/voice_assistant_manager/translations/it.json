@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Voice Assistant Manager",
+        "description": "Questo aggiungerà il pannello Voice Assistant Manager alla tua barra laterale. Il pannello ti permette di gestire l'esposizione di Google Assistant e Alexa per le tue entità.",
+        "data": {}
+      }
+    },
+    "abort": {
+      "already_configured": "Voice Assistant Manager è già configurato."
+    },
+    "error": {
+      "unknown": "Si è verificato un errore imprevisto."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni Voice Assistant Manager",
+        "description": "Tutte le impostazioni sono gestite tramite il pannello Voice Assistant Manager nella barra laterale."
+      }
+    }
+  }
+}

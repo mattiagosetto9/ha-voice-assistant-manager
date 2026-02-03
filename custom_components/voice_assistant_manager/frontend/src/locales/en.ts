@@ -1,0 +1,134 @@
+/**
+ * English translations
+ */
+export const en: Record<string, string> = {
+  // Header
+  title: "Voice Assistant Manager",
+  mode: "Mode",
+  linked: "Linked",
+  separate: "Separate",
+  exclude: "Exclude",
+  include: "Include",
+  
+  // Tabs
+  entities: "Entities",
+  settings: "Settings",
+  
+  // Domain card
+  domainsToExclude: "Domains to Exclude",
+  domainsToInclude: "Domains to Include",
+  selected: "selected",
+  selectAll: "Select All",
+  deselectAll: "Deselect All",
+  
+  // Filters
+  search: "Search",
+  searchPlaceholder: "Search by name or ID...",
+  domain: "Domain",
+  allDomains: "All domains",
+  area: "Area",
+  allAreas: "All areas",
+  onlyHidden: "Only hidden",
+  onlyExposed: "Only exposed",
+  withAlias: "With alias",
+  overrides: "Overrides",
+  
+  // Bulk actions
+  selectedCount: "selected",
+  selectAction: "Select action...",
+  addToExclusions: "Add to exclusions",
+  removeFromExclusions: "Remove from exclusions",
+  addOverride: "Add override",
+  removeOverride: "Remove override",
+  excludeDomain: "Exclude entire domain",
+  excludeDevice: "Exclude entire device",
+  addAliasPrefix: "Add alias prefix",
+  addAliasSuffix: "Add alias suffix",
+  clearAlias: "Clear alias",
+  valuePlaceholder: "Value (for prefix/suffix)",
+  apply: "Apply",
+  clear: "Clear",
+  
+  // Table
+  status: "Status",
+  override: "Override",
+  voiceAlias: "Voice Alias",
+  name: "Name",
+  reason: "Reason",
+  exposed: "Exposed",
+  hidden: "Hidden",
+  byDomain: "By domain",
+  manual: "Manual",
+  aliasPlaceholder: "Voice alias...",
+  
+  // Pagination
+  showing: "Showing",
+  of: "of",
+  total: "total",
+  perPage: "per page",
+  page: "Page",
+  first: "First",
+  prev: "Prev",
+  next: "Next",
+  last: "Last",
+  noResults: "No entities match the current filters",
+  
+  // Settings
+  googleAssistant: "Google Assistant",
+  enableGoogle: "Enable Google Assistant",
+  projectId: "Project ID",
+  projectIdPlaceholder: "my-home-assistant-project",
+  serviceAccountPath: "Service Account Path",
+  serviceAccountPlaceholder: "/config/SERVICE_ACCOUNT.json",
+  reportState: "Report State",
+  securePin: "Secure Devices PIN (optional)",
+  securePinPlaceholder: "1234",
+  advancedYaml: "Advanced YAML (optional)",
+  amazonAlexa: "Amazon Alexa",
+  enableAlexa: "Enable Alexa",
+  baseConfig: "Base Configuration (required)",
+  baseConfigPlaceholder: "locale: it-IT\nendpoint: https://...",
+  homekitBridge: "HomeKit Bridge",
+  homekitDescription: "Select a HomeKit bridge. Configuration will be synced when you click \"Save & Generate\" on the Entities tab.",
+  noHomekitBridges: "No HomeKit bridges found. Please configure HomeKit Bridge in Home Assistant first.",
+  noBridge: "No bridge (disabled)",
+  port: "Port",
+  homekitEnabled: "HomeKit will be enabled after saving",
+  homekitDisabled: "HomeKit disabled",
+  backToEntities: "Back to Entities",
+  saveSettings: "Save Settings",
+  saving: "Saving...",
+  configureSettings: "Configure your voice assistant settings above",
+  
+  // Footer
+  googleReady: "Google Assistant: Ready",
+  googleNotConfigured: "Google Assistant: Not configured",
+  alexaReady: "Alexa: Ready",
+  alexaNotConfigured: "Alexa: Not configured",
+  homekitEnabledStatus: "HomeKit: Enabled",
+  homekitDisabledStatus: "HomeKit: Disabled",
+  previewYaml: "Preview YAML",
+  saveGenerate: "Save & Generate",
+  checkConfig: "Check Config",
+  restartHa: "Restart HA",
+  
+  // Dialog
+  yamlPreview: "YAML Preview",
+  warnings: "Warnings",
+  notConfigured: "Not configured",
+  close: "Close",
+  
+  // Messages
+  loading: "Loading Voice Assistant Manager...",
+  error: "Error",
+  retry: "Retry",
+  settingsSaved: "Settings saved successfully!",
+  configValid: "Configuration is valid!",
+  configError: "Configuration error",
+  restartConfirm: "Are you sure you want to restart Home Assistant?",
+  restarting: "Home Assistant is restarting...",
+  configSaved: "Configuration saved:",
+  googleOk: "Google Assistant: OK",
+  alexaOk: "Alexa: OK",
+  homekitOk: "HomeKit: OK",
+};

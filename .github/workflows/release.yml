@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: custom_components/voice_assistant_manager/frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: custom_components/voice_assistant_manager/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Update version in manifest
+        run: |
+          sed -i 's/"version": ".*"/"version": "${{ steps.get_version.outputs.VERSION }}"/' custom_components/voice_assistant_manager/manifest.json
+
+      - name: Update version in const.py
+        run: |
+          sed -i 's/VERSION: Final = ".*"/VERSION: Final = "${{ steps.get_version.outputs.VERSION }}"/' custom_components/voice_assistant_manager/const.py
+
+      - name: Create zip file
+        run: |
+          cd custom_components
+          # Exclude source files and node_modules from zip
+          zip -r ../voice_assistant_manager.zip voice_assistant_manager \
+            -x "voice_assistant_manager/frontend/src/*" \
+            -x "voice_assistant_manager/frontend/node_modules/*" \
+            -x "voice_assistant_manager/frontend/package.json" \
+            -x "voice_assistant_manager/frontend/package-lock.json" \
+            -x "voice_assistant_manager/frontend/tsconfig.json" \
+            -x "voice_assistant_manager/frontend/rollup.config.mjs" \
+            -x "voice_assistant_manager/frontend/.gitignore"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: voice_assistant_manager.zip
+          generate_release_notes: true
+          body: |
+            ## Installation
+
+            ### HACS (Recommended)
+            1. Open HACS → Integrations → Custom repositories
+            2. Add this repository URL
+            3. Search for "Voice Assistant Manager" and install
+            4. Restart Home Assistant
+            5. Add the integration from Settings → Devices & Services
+
+            ### Manual
+            1. Download `voice_assistant_manager.zip` from this release
+            2. Extract to `config/custom_components/`
+            3. Restart Home Assistant
+            4. Add the integration from Settings → Devices & Services

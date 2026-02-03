@@ -1,0 +1,22 @@
+{
+  "name": "voice-assistant-manager-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "lit": "^3.1.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^4.9.0",
+    "typescript": "^5.3.0",
+    "tslib": "^2.6.0"
+  }
+}
