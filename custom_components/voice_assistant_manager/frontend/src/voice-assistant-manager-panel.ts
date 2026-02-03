@@ -30,6 +30,7 @@ import type {
   HomeAssistant,
   VoiceManagerState,
   FilterConfig,
+  FilterMode,
   GoogleSettings,
   AlexaSettings,
   Entity,
@@ -81,6 +82,16 @@ export class VoiceAssistantManagerPanel extends LitElement {
   @state() private _pendingGoogleSettings: Partial<GoogleSettings> | null = null;
   @state() private _pendingAlexaSettings: Partial<AlexaSettings> | null = null;
   @state() private _pendingHomekitBridge: string | null = null;
+  @state() private _pendingFilterConfig: FilterConfig | null = null;
+  @state() private _pendingGoogleFilterConfig: FilterConfig | null = null;
+  @state() private _pendingAlexaFilterConfig: FilterConfig | null = null;
+  @state() private _pendingHomekitFilterConfig: FilterConfig | null = null;
+  @state() private _pendingAliases: Record<string, string> | null = null;
+  @state() private _pendingGoogleAliases: Record<string, string> | null = null;
+  @state() private _pendingAlexaAliases: Record<string, string> | null = null;
+  @state() private _hasUnsavedChanges = false;
+  @state() private _showUnsavedDialog = false;
+  @state() private _pendingTabSwitch: string | null = null;
 
   private _debouncedSearch: (value: string) => void;
 
@@ -156,9 +167,25 @@ export class VoiceAssistantManagerPanel extends LitElement {
         type: 'voice_assistant_manager/get_state',
       });
       this._state = result;
+      
+      // Initialize pending settings
       this._pendingGoogleSettings = { ...(result.google_settings || {}) };
       this._pendingAlexaSettings = { ...(result.alexa_settings || {}) };
       this._pendingHomekitBridge = result.homekit_entry_id || '';
+      
+      // Initialize pending filter configs
+      this._pendingFilterConfig = { ...(result.filter_config || DEFAULT_FILTER_CONFIG) };
+      this._pendingGoogleFilterConfig = { ...(result.google_filter_config || DEFAULT_FILTER_CONFIG) };
+      this._pendingAlexaFilterConfig = { ...(result.alexa_filter_config || DEFAULT_FILTER_CONFIG) };
+      this._pendingHomekitFilterConfig = { ...(result.homekit_filter_config || DEFAULT_FILTER_CONFIG) };
+      
+      // Initialize pending aliases
+      this._pendingAliases = { ...(result.aliases || {}) };
+      this._pendingGoogleAliases = { ...(result.google_aliases || {}) };
+      this._pendingAlexaAliases = { ...(result.alexa_aliases || {}) };
+      
+      // Reset unsaved changes flag
+      this._hasUnsavedChanges = false;
     } catch (error) {
       console.error('Failed to load state:', error);
       this._error = (error as Error).message || 'Failed to load Voice Manager state';
@@ -170,20 +197,29 @@ export class VoiceAssistantManagerPanel extends LitElement {
     if (!this._state) return DEFAULT_FILTER_CONFIG;
     
     if (this._state.mode === 'linked') {
-      return this._state.filter_config || DEFAULT_FILTER_CONFIG;
+      return this._pendingFilterConfig || DEFAULT_FILTER_CONFIG;
     }
     
-    const key = `${this._activePlatform}_filter_config` as keyof VoiceManagerState;
-    return (this._state[key] as FilterConfig) || DEFAULT_FILTER_CONFIG;
+    if (this._activePlatform === 'google') {
+      return this._pendingGoogleFilterConfig || DEFAULT_FILTER_CONFIG;
+    } else if (this._activePlatform === 'alexa') {
+      return this._pendingAlexaFilterConfig || DEFAULT_FILTER_CONFIG;
+    } else {
+      return this._pendingHomekitFilterConfig || DEFAULT_FILTER_CONFIG;
+    }
   }
 
   private _getCurrentAliases(): Record<string, string> {
     if (!this._state) return {};
     if (this._state.mode === 'linked') {
-      return this._state.aliases || {};
+      return this._pendingAliases || {};
     }
-    const key = `${this._activePlatform}_aliases` as keyof VoiceManagerState;
-    return (this._state[key] as Record<string, string>) || {};
+    if (this._activePlatform === 'google') {
+      return this._pendingGoogleAliases || {};
+    } else if (this._activePlatform === 'alexa') {
+      return this._pendingAlexaAliases || {};
+    }
+    return {};
   }
 
   private _isEntityExposed(entity: Entity): ExposureResult {
@@ -276,23 +312,24 @@ export class VoiceAssistantManagerPanel extends LitElement {
     this._saving = false;
   }
 
-  private async _setFilterMode(filterMode: string): Promise<void> {
-    this._saving = true;
-    try {
-      await this.hass.callWS({
-        type: 'voice_assistant_manager/set_filter_mode',
-        filter_mode: filterMode,
-        ...(this._state?.mode === 'separate' ? { assistant: this._activePlatform } : {}),
-      });
-      await this._loadState();
-    } catch (error) {
-      console.error('Failed to set filter mode:', error);
-      this._showError('Failed to set filter mode: ' + (error as Error).message);
+  private _setFilterMode(filterMode: string): void {
+    const config = this._getCurrentFilterConfig();
+    config.filter_mode = filterMode as FilterMode;
+    
+    if (this._state?.mode === 'linked') {
+      this._pendingFilterConfig = { ...config };
+    } else if (this._activePlatform === 'google') {
+      this._pendingGoogleFilterConfig = { ...config };
+    } else if (this._activePlatform === 'alexa') {
+      this._pendingAlexaFilterConfig = { ...config };
+    } else {
+      this._pendingHomekitFilterConfig = { ...config };
     }
-    this._saving = false;
+    
+    this._hasUnsavedChanges = true;
   }
 
-  private async _toggleDomain(domain: string): Promise<void> {
+  private _toggleDomain(domain: string): void {
     const config = this._getCurrentFilterConfig();
     const domains = new Set(config.domains || []);
     
@@ -301,67 +338,80 @@ export class VoiceAssistantManagerPanel extends LitElement {
     } else {
       domains.add(domain);
     }
-
-    this._saving = true;
-    try {
-      await this.hass.callWS({
-        type: 'voice_assistant_manager/set_domains',
-        domains: Array.from(domains),
-        ...(this._state?.mode === 'separate' ? { assistant: this._activePlatform } : {}),
-      });
-      await this._loadState();
-    } catch (error) {
-      console.error('Failed to toggle domain:', error);
-      this._showError('Failed to toggle domain: ' + (error as Error).message);
+    
+    config.domains = Array.from(domains);
+    
+    if (this._state?.mode === 'linked') {
+      this._pendingFilterConfig = { ...config };
+    } else if (this._activePlatform === 'google') {
+      this._pendingGoogleFilterConfig = { ...config };
+    } else if (this._activePlatform === 'alexa') {
+      this._pendingAlexaFilterConfig = { ...config };
+    } else {
+      this._pendingHomekitFilterConfig = { ...config };
     }
-    this._saving = false;
+    
+    this._hasUnsavedChanges = true;
   }
 
-  private async _selectAllDomains(): Promise<void> {
+  private _selectAllDomains(): void {
     const allDomains = this._state?.domains || [];
-    this._saving = true;
-    try {
-      await this.hass.callWS({
-        type: 'voice_assistant_manager/set_domains',
-        domains: allDomains,
-        ...(this._state?.mode === 'separate' ? { assistant: this._activePlatform } : {}),
-      });
-      await this._loadState();
-    } catch (error) {
-      console.error('Failed to select all domains:', error);
+    const config = this._getCurrentFilterConfig();
+    config.domains = [...allDomains];
+    
+    if (this._state?.mode === 'linked') {
+      this._pendingFilterConfig = { ...config };
+    } else if (this._activePlatform === 'google') {
+      this._pendingGoogleFilterConfig = { ...config };
+    } else if (this._activePlatform === 'alexa') {
+      this._pendingAlexaFilterConfig = { ...config };
+    } else {
+      this._pendingHomekitFilterConfig = { ...config };
     }
-    this._saving = false;
+    
+    this._hasUnsavedChanges = true;
   }
 
-  private async _deselectAllDomains(): Promise<void> {
-    this._saving = true;
-    try {
-      await this.hass.callWS({
-        type: 'voice_assistant_manager/set_domains',
-        domains: [],
-        ...(this._state?.mode === 'separate' ? { assistant: this._activePlatform } : {}),
-      });
-      await this._loadState();
-    } catch (error) {
-      console.error('Failed to deselect all domains:', error);
+  private _deselectAllDomains(): void {
+    const config = this._getCurrentFilterConfig();
+    config.domains = [];
+    
+    if (this._state?.mode === 'linked') {
+      this._pendingFilterConfig = { ...config };
+    } else if (this._activePlatform === 'google') {
+      this._pendingGoogleFilterConfig = { ...config };
+    } else if (this._activePlatform === 'alexa') {
+      this._pendingAlexaFilterConfig = { ...config };
+    } else {
+      this._pendingHomekitFilterConfig = { ...config };
     }
-    this._saving = false;
+    
+    this._hasUnsavedChanges = true;
   }
 
-  private async _toggleOverride(entityId: string): Promise<void> {
-    this._saving = true;
-    try {
-      await this.hass.callWS({
-        type: 'voice_assistant_manager/toggle_override',
-        entity_id: entityId,
-        ...(this._state?.mode === 'separate' ? { assistant: this._activePlatform } : {}),
-      });
-      await this._loadState();
-    } catch (error) {
-      console.error('Failed to toggle override:', error);
-      this._showError('Failed to toggle override: ' + (error as Error).message);
+  private _toggleOverride(entityId: string): void {
+    const config = this._getCurrentFilterConfig();
+    const overrides = new Set(config.overrides || []);
+    
+    if (overrides.has(entityId)) {
+      overrides.delete(entityId);
+    } else {
+      overrides.add(entityId);
     }
-    this._saving = false;
+    
+    config.overrides = Array.from(overrides);
+    
+    if (this._state?.mode === 'linked') {
+      this._pendingFilterConfig = { ...config };
+    } else if (this._activePlatform === 'google') {
+      this._pendingGoogleFilterConfig = { ...config };
+    } else if (this._activePlatform === 'alexa') {
+      this._pendingAlexaFilterConfig = { ...config };
+    } else {
+      this._pendingHomekitFilterConfig = { ...config };
+    }
+    
+    this._hasUnsavedChanges = true;
   }
 
   private _toggleSelectAllPage(e: Event, pageEntities: Entity[]): void {
@@ -395,84 +445,149 @@ export class VoiceAssistantManagerPanel extends LitElement {
     this.dispatchEvent(event);
   }
 
-  private async _setAlias(entityId: string, alias: string): Promise<void> {
-    try {
-      await this.hass.callWS({
-        type: 'voice_assistant_manager/set_alias',
-        entity_id: entityId,
-        alias: alias,
-        ...(this._state?.mode === 'separate' ? { assistant: this._activePlatform } : {}),
-      });
-      
-      const aliases = { ...this._getCurrentAliases() };
-      if (alias) {
-        aliases[entityId] = alias;
-      } else {
-        delete aliases[entityId];
-      }
-      
-      if (this._state?.mode === 'linked') {
-        this._state = { ...this._state!, aliases };
-      } else {
-        const aliasKey = `${this._activePlatform}_aliases` as keyof VoiceManagerState;
-        this._state = { ...this._state!, [aliasKey]: aliases } as VoiceManagerState;
-      }
-    } catch (error) {
-      console.error('Failed to set alias:', error);
-      this._showError('Failed to set alias: ' + (error as Error).message);
+  private _setAlias(entityId: string, alias: string): void {
+    const aliases = { ...this._getCurrentAliases() };
+    if (alias) {
+      aliases[entityId] = alias;
+    } else {
+      delete aliases[entityId];
     }
+    
+    if (this._state?.mode === 'linked') {
+      this._pendingAliases = { ...aliases };
+    } else if (this._activePlatform === 'google') {
+      this._pendingGoogleAliases = { ...aliases };
+    } else if (this._activePlatform === 'alexa') {
+      this._pendingAlexaAliases = { ...aliases };
+    }
+    
+    this._hasUnsavedChanges = true;
   }
 
-  private async _bulkAction(action: string): Promise<void> {
+  private _bulkAction(action: string): void {
     if (this._selectedEntities.length === 0) return;
 
-    this._saving = true;
-    try {
-      await this.hass.callWS({
-        type: 'voice_assistant_manager/bulk_update',
-        action: action,
-        entity_ids: this._selectedEntities,
-        value: this._bulkActionValue,
-        ...(this._state?.mode === 'separate' ? { assistant: this._activePlatform } : {}),
+    const config = this._getCurrentFilterConfig();
+    const aliases = this._getCurrentAliases();
+    const ent_reg = this.hass.states;
+
+    if (action === 'exclude') {
+      const current_entities = new Set(config.entities || []);
+      this._selectedEntities.forEach(id => current_entities.add(id));
+      config.entities = Array.from(current_entities);
+    } else if (action === 'unexclude') {
+      const current_entities = new Set(config.entities || []);
+      this._selectedEntities.forEach(id => current_entities.delete(id));
+      config.entities = Array.from(current_entities);
+    } else if (action === 'add_override') {
+      const current_overrides = new Set(config.overrides || []);
+      this._selectedEntities.forEach(id => current_overrides.add(id));
+      config.overrides = Array.from(current_overrides);
+    } else if (action === 'remove_override') {
+      const current_overrides = new Set(config.overrides || []);
+      this._selectedEntities.forEach(id => current_overrides.delete(id));
+      config.overrides = Array.from(current_overrides);
+    } else if (action === 'set_alias_prefix' || action === 'set_alias_suffix') {
+      this._selectedEntities.forEach(entityId => {
+        const state = ent_reg[entityId];
+        const name = state?.attributes?.friendly_name || entityId;
+        if (action === 'set_alias_prefix') {
+          aliases[entityId] = `${this._bulkActionValue}${name}`;
+        } else {
+          aliases[entityId] = `${name}${this._bulkActionValue}`;
+        }
       });
-      this._selectedEntities = [];
-      this._bulkActionValue = '';
-      await this._loadState();
-    } catch (error) {
-      console.error('Failed to perform bulk action:', error);
-      this._showError('Failed to perform bulk action: ' + (error as Error).message);
+    } else if (action === 'clear_alias') {
+      this._selectedEntities.forEach(entityId => {
+        delete aliases[entityId];
+      });
+    } else if (action === 'exclude_domain') {
+      const domains = new Set(config.domains || []);
+      this._selectedEntities.forEach(entityId => {
+        const domain = entityId.split('.')[0];
+        domains.add(domain);
+      });
+      config.domains = Array.from(domains);
+    } else if (action === 'exclude_device') {
+      const entities = this._state?.entities || [];
+      const devices = new Set(config.devices || []);
+      this._selectedEntities.forEach(entityId => {
+        const entity = entities.find(e => e.entity_id === entityId);
+        if (entity?.device_id) {
+          devices.add(entity.device_id);
+        }
+      });
+      config.devices = Array.from(devices);
     }
-    this._saving = false;
+
+    // Update pending state
+    if (this._state?.mode === 'linked') {
+      this._pendingFilterConfig = { ...config };
+      this._pendingAliases = { ...aliases };
+    } else if (this._activePlatform === 'google') {
+      this._pendingGoogleFilterConfig = { ...config };
+      this._pendingGoogleAliases = { ...aliases };
+    } else if (this._activePlatform === 'alexa') {
+      this._pendingAlexaFilterConfig = { ...config };
+      this._pendingAlexaAliases = { ...aliases };
+    } else {
+      this._pendingHomekitFilterConfig = { ...config };
+    }
+
+    this._hasUnsavedChanges = true;
+    this._selectedEntities = [];
+    this._bulkActionValue = '';
   }
 
   private async _saveAllSettings(): Promise<void> {
     this._saving = true;
     try {
+      const payload: Record<string, unknown> = {
+        type: 'voice_assistant_manager/save_all',
+      };
+      
+      // Add filter configs
+      if (this._pendingFilterConfig) {
+        payload.filter_config = this._pendingFilterConfig;
+      }
+      if (this._pendingGoogleFilterConfig) {
+        payload.google_filter_config = this._pendingGoogleFilterConfig;
+      }
+      if (this._pendingAlexaFilterConfig) {
+        payload.alexa_filter_config = this._pendingAlexaFilterConfig;
+      }
+      if (this._pendingHomekitFilterConfig) {
+        payload.homekit_filter_config = this._pendingHomekitFilterConfig;
+      }
+      
+      // Add aliases
+      if (this._pendingAliases) {
+        payload.aliases = this._pendingAliases;
+      }
+      if (this._pendingGoogleAliases) {
+        payload.google_aliases = this._pendingGoogleAliases;
+      }
+      if (this._pendingAlexaAliases) {
+        payload.alexa_aliases = this._pendingAlexaAliases;
+      }
+      
+      // Add settings
       if (this._pendingGoogleSettings) {
-        await this.hass.callWS({
-          type: 'voice_assistant_manager/set_settings',
-          assistant: 'google',
-          settings: this._pendingGoogleSettings,
-        });
+        payload.google_settings = this._pendingGoogleSettings;
       }
-      
       if (this._pendingAlexaSettings) {
-        await this.hass.callWS({
-          type: 'voice_assistant_manager/set_settings',
-          assistant: 'alexa',
-          settings: this._pendingAlexaSettings,
-        });
+        payload.alexa_settings = this._pendingAlexaSettings;
       }
       
+      // Add HomeKit bridge
       const currentBridge = this._state?.homekit_entry_id || '';
       if (this._pendingHomekitBridge !== currentBridge) {
-        await this.hass.callWS({
-          type: 'voice_assistant_manager/set_homekit_bridge',
-          entry_id: this._pendingHomekitBridge || null,
-        });
+        payload.homekit_entry_id = this._pendingHomekitBridge || null;
       }
       
+      await this.hass.callWS(payload as { type: string; [key: string]: unknown });
       await this._loadState();
+      this._hasUnsavedChanges = false;
       alert(this._t('settingsSaved'));
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -481,11 +596,56 @@ export class VoiceAssistantManagerPanel extends LitElement {
     this._saving = false;
   }
 
+  private _discardChanges(): void {
+    if (!this._state) return;
+    
+    // Reset all pending states to saved state
+    this._pendingFilterConfig = { ...(this._state.filter_config || DEFAULT_FILTER_CONFIG) };
+    this._pendingGoogleFilterConfig = { ...(this._state.google_filter_config || DEFAULT_FILTER_CONFIG) };
+    this._pendingAlexaFilterConfig = { ...(this._state.alexa_filter_config || DEFAULT_FILTER_CONFIG) };
+    this._pendingHomekitFilterConfig = { ...(this._state.homekit_filter_config || DEFAULT_FILTER_CONFIG) };
+    
+    this._pendingAliases = { ...(this._state.aliases || {}) };
+    this._pendingGoogleAliases = { ...(this._state.google_aliases || {}) };
+    this._pendingAlexaAliases = { ...(this._state.alexa_aliases || {}) };
+    
+    this._pendingGoogleSettings = { ...(this._state.google_settings || {}) };
+    this._pendingAlexaSettings = { ...(this._state.alexa_settings || {}) };
+    this._pendingHomekitBridge = this._state.homekit_entry_id || '';
+    
+    this._hasUnsavedChanges = false;
+    this._showUnsavedDialog = false;
+  }
+
+  private _handleTabSwitch(newTab: string): void {
+    if (this._hasUnsavedChanges) {
+      this._pendingTabSwitch = newTab;
+      this._showUnsavedDialog = true;
+    } else {
+      this._activeTab = newTab;
+    }
+  }
+
+  private _confirmTabSwitch(): void {
+    if (this._pendingTabSwitch) {
+      this._activeTab = this._pendingTabSwitch;
+      this._pendingTabSwitch = null;
+    }
+    this._showUnsavedDialog = false;
+    this._hasUnsavedChanges = false;
+  }
+
+  private _cancelTabSwitch(): void {
+    this._showUnsavedDialog = false;
+    this._pendingTabSwitch = null;
+  }
+
   private _updatePendingGoogle(key: keyof GoogleSettings, value: unknown): void {
     this._pendingGoogleSettings = {
       ...this._pendingGoogleSettings,
       [key]: value,
     };
+    this._hasUnsavedChanges = true;
   }
 
   private _updatePendingAlexa(key: keyof AlexaSettings, value: unknown): void {
@@ -493,6 +653,7 @@ export class VoiceAssistantManagerPanel extends LitElement {
       ...this._pendingAlexaSettings,
       [key]: value,
     };
+    this._hasUnsavedChanges = true;
   }
 
   private async _previewYAML(): Promise<void> {
@@ -511,6 +672,56 @@ export class VoiceAssistantManagerPanel extends LitElement {
   private async _writeFiles(): Promise<void> {
     this._saving = true;
     try {
+      // First, save all pending changes if any
+      if (this._hasUnsavedChanges) {
+        const payload: Record<string, unknown> = {
+          type: 'voice_assistant_manager/save_all',
+        };
+        
+        // Add filter configs
+        if (this._pendingFilterConfig) {
+          payload.filter_config = this._pendingFilterConfig;
+        }
+        if (this._pendingGoogleFilterConfig) {
+          payload.google_filter_config = this._pendingGoogleFilterConfig;
+        }
+        if (this._pendingAlexaFilterConfig) {
+          payload.alexa_filter_config = this._pendingAlexaFilterConfig;
+        }
+        if (this._pendingHomekitFilterConfig) {
+          payload.homekit_filter_config = this._pendingHomekitFilterConfig;
+        }
+        
+        // Add aliases
+        if (this._pendingAliases) {
+          payload.aliases = this._pendingAliases;
+        }
+        if (this._pendingGoogleAliases) {
+          payload.google_aliases = this._pendingGoogleAliases;
+        }
+        if (this._pendingAlexaAliases) {
+          payload.alexa_aliases = this._pendingAlexaAliases;
+        }
+        
+        // Add settings
+        if (this._pendingGoogleSettings) {
+          payload.google_settings = this._pendingGoogleSettings;
+        }
+        if (this._pendingAlexaSettings) {
+          payload.alexa_settings = this._pendingAlexaSettings;
+        }
+        
+        // Add HomeKit bridge
+        const currentBridge = this._state?.homekit_entry_id || '';
+        if (this._pendingHomekitBridge !== currentBridge) {
+          payload.homekit_entry_id = this._pendingHomekitBridge || null;
+        }
+        
+        await this.hass.callWS(payload as { type: string; [key: string]: unknown });
+        this._hasUnsavedChanges = false;
+      }
+      
+      // Then write files
       const result = await this.hass.callWS<{
         google: { written: boolean; error: string | null };
         alexa: { written: boolean; error: string | null };
@@ -661,13 +872,13 @@ export class VoiceAssistantManagerPanel extends LitElement {
       <div class="tabs">
         <div
           class="tab ${this._activeTab === 'entities' ? 'active' : ''}"
-          @click=${() => (this._activeTab = 'entities')}
+          @click=${() => this._handleTabSwitch('entities')}
         >
           ${this._t('entities')}
         </div>
         <div
           class="tab ${this._activeTab === 'settings' ? 'active' : ''}"
-          @click=${() => (this._activeTab = 'settings')}
+          @click=${() => this._handleTabSwitch('settings')}
         >
           ${this._t('settings')}
         </div>
@@ -680,6 +891,7 @@ export class VoiceAssistantManagerPanel extends LitElement {
       </div>
 
       ${this._renderFooter()}
+      ${this._showUnsavedDialog ? this._renderUnsavedDialog() : ''}
       ${this._previewDialog ? this._renderPreviewDialog() : ''}
     `;
   }
@@ -1203,7 +1415,10 @@ export class VoiceAssistantManagerPanel extends LitElement {
           </p>
         ` : html`
           <div class="homekit-bridge-select">
-            <select @change=${(e: Event) => this._pendingHomekitBridge = (e.target as HTMLSelectElement).value}>
+            <select @change=${(e: Event) => {
+              this._pendingHomekitBridge = (e.target as HTMLSelectElement).value;
+              this._hasUnsavedChanges = true;
+            }}>
               <option value="" ?selected=${!effectiveBridge}>${this._t('noBridge')}</option>
               ${bridges.map((bridge: HomeKitBridge) => html`
                 <option value="${bridge.entry_id}" ?selected=${effectiveBridge === bridge.entry_id}>
@@ -1236,9 +1451,16 @@ export class VoiceAssistantManagerPanel extends LitElement {
           <div class="footer-actions">
             <button
               class="btn btn-secondary"
-              @click=${() => this._activeTab = 'entities'}
+              @click=${() => this._handleTabSwitch('entities')}
             >
               ${this._t('backToEntities')}
+            </button>
+            <button
+              class="btn btn-secondary"
+              @click=${this._discardChanges}
+              ?disabled=${!this._hasUnsavedChanges}
+            >
+              ${this._t('discardChanges') || 'Discard Changes'}
             </button>
             <button
               class="btn btn-primary"
@@ -1255,6 +1477,12 @@ export class VoiceAssistantManagerPanel extends LitElement {
     return html`
       <div class="footer">
         <div class="footer-info">
+          ${this._hasUnsavedChanges ? html`
+            <span style="color: var(--vm-warning); font-weight: bold;">
+              ⚠️ ${this._t('unsavedChanges') || 'Unsaved changes'}
+            </span>
+            |
+          ` : ''}
           ${this._state?.google_complete
             ? this._t('googleReady')
             : this._t('googleNotConfigured')}
@@ -1268,6 +1496,14 @@ export class VoiceAssistantManagerPanel extends LitElement {
             : this._t('homekitDisabledStatus')}
         </div>
         <div class="footer-actions">
+          ${this._hasUnsavedChanges ? html`
+            <button
+              class="btn btn-secondary"
+              @click=${this._discardChanges}
+            >
+              ${this._t('discardChanges') || 'Discard Changes'}
+            </button>
+          ` : ''}
           <button
             class="btn btn-secondary"
             @click=${this._previewYAML}
@@ -1297,6 +1533,45 @@ export class VoiceAssistantManagerPanel extends LitElement {
           >
             ${this._t('restartHa')}
           </button>
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderUnsavedDialog(): TemplateResult {
+    return html`
+      <div class="dialog-overlay" @click=${this._cancelTabSwitch}>
+        <div class="dialog" @click=${(e: Event) => e.stopPropagation()} style="max-width: 500px;">
+          <div class="dialog-header">
+            <h2>⚠️ ${this._t('unsavedChanges') || 'Unsaved Changes'}</h2>
+            <button
+              class="dialog-close"
+              @click=${this._cancelTabSwitch}
+            >
+              ×
+            </button>
+          </div>
+          <div class="dialog-content">
+            <p>${this._t('unsavedChangesMessage') || 'You have unsaved changes. Do you want to discard them?'}</p>
+          </div>
+          <div class="dialog-footer">
+            <button
+              class="btn btn-secondary"
+              @click=${this._cancelTabSwitch}
+            >
+              ${this._t('cancel') || 'Cancel'}
+            </button>
+            <button
+              class="btn btn-primary"
+              @click=${() => {
+                this._discardChanges();
+                this._confirmTabSwitch();
+              }}
+              style="background: var(--vm-warning);"
+            >
+              ${this._t('discardChanges') || 'Discard Changes'}
+            </button>
+          </div>
         </div>
       </div>
     `;

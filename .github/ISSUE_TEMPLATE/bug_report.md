@@ -30,7 +30,7 @@ If applicable, add screenshots to help explain your problem.
 ## Environment
 
 - Home Assistant Version: [e.g., 2024.1.0]
-- Voice Manager Version: [e.g., 1.0.0]
+- Voice Assistant Manager Version: [e.g., 1.0.0]
 - Installation Method: [HACS / Manual]
 - Browser: [e.g., Chrome, Firefox, Safari]
 

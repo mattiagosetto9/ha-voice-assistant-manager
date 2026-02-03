@@ -131,4 +131,8 @@ export const en: Record<string, string> = {
   googleOk: "Google Assistant: OK",
   alexaOk: "Alexa: OK",
   homekitOk: "HomeKit: OK",
+  unsavedChanges: "Unsaved changes",
+  unsavedChangesMessage: "You have unsaved changes. Do you want to discard them?",
+  discardChanges: "Discard Changes",
+  cancel: "Cancel",
 };

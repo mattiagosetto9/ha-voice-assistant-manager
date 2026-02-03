@@ -75,6 +75,7 @@ def async_register_websocket_api(hass: HomeAssistant) -> None:
 
     # Settings endpoints
     websocket_api.async_register_command(hass, websocket_set_settings)
+    websocket_api.async_register_command(hass, websocket_save_all)
 
     # YAML generation endpoints
     websocket_api.async_register_command(hass, websocket_preview_yaml)
@@ -613,6 +614,113 @@ async def websocket_set_settings(
     except Exception as err:
         _LOGGER.error("Failed to set settings: %s", err)
         connection.send_error(msg["id"], "settings_error", str(err))
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "voice_assistant_manager/save_all",
+        vol.Optional("filter_config"): {
+            vol.Optional("filter_mode"): vol.In([FILTER_MODE_EXCLUDE, FILTER_MODE_INCLUDE]),
+            vol.Optional("domains"): [str],
+            vol.Optional("entities"): [str],
+            vol.Optional("devices"): [str],
+            vol.Optional("overrides"): [str],
+        },
+        vol.Optional("google_filter_config"): {
+            vol.Optional("filter_mode"): vol.In([FILTER_MODE_EXCLUDE, FILTER_MODE_INCLUDE]),
+            vol.Optional("domains"): [str],
+            vol.Optional("entities"): [str],
+            vol.Optional("devices"): [str],
+            vol.Optional("overrides"): [str],
+        },
+        vol.Optional("alexa_filter_config"): {
+            vol.Optional("filter_mode"): vol.In([FILTER_MODE_EXCLUDE, FILTER_MODE_INCLUDE]),
+            vol.Optional("domains"): [str],
+            vol.Optional("entities"): [str],
+            vol.Optional("devices"): [str],
+            vol.Optional("overrides"): [str],
+        },
+        vol.Optional("homekit_filter_config"): {
+            vol.Optional("filter_mode"): vol.In([FILTER_MODE_EXCLUDE, FILTER_MODE_INCLUDE]),
+            vol.Optional("domains"): [str],
+            vol.Optional("entities"): [str],
+            vol.Optional("devices"): [str],
+            vol.Optional("overrides"): [str],
+        },
+        vol.Optional("aliases"): {str: str},
+        vol.Optional("google_aliases"): {str: str},
+        vol.Optional("alexa_aliases"): {str: str},
+        vol.Optional("google_settings"): dict,
+        vol.Optional("alexa_settings"): dict,
+        vol.Optional("homekit_entry_id"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def websocket_save_all(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Save all configuration at once (filter configs, aliases, settings)."""
+    try:
+        storage = _get_storage(hass)
+        
+        # Save filter configs
+        if "filter_config" in msg:
+            validated_config = validate_filter_config(msg["filter_config"])
+            await storage.async_set_filter_config(validated_config, None)
+        
+        if "google_filter_config" in msg:
+            validated_config = validate_filter_config(msg["google_filter_config"])
+            await storage.async_set_filter_config(validated_config, ASSISTANT_GOOGLE)
+        
+        if "alexa_filter_config" in msg:
+            validated_config = validate_filter_config(msg["alexa_filter_config"])
+            await storage.async_set_filter_config(validated_config, ASSISTANT_ALEXA)
+        
+        if "homekit_filter_config" in msg:
+            validated_config = validate_filter_config(msg["homekit_filter_config"])
+            await storage.async_set_filter_config(validated_config, ASSISTANT_HOMEKIT)
+        
+        # Save aliases
+        if "aliases" in msg:
+            await storage.async_set_aliases_bulk(msg["aliases"], None)
+        
+        if "google_aliases" in msg:
+            await storage.async_set_aliases_bulk(msg["google_aliases"], ASSISTANT_GOOGLE)
+        
+        if "alexa_aliases" in msg:
+            await storage.async_set_aliases_bulk(msg["alexa_aliases"], ASSISTANT_ALEXA)
+        
+        # Save settings
+        if "google_settings" in msg:
+            validated_settings = validate_google_settings(msg["google_settings"])
+            await storage.async_set_google_settings(validated_settings)
+        
+        if "alexa_settings" in msg:
+            validated_settings = validate_alexa_settings(msg["alexa_settings"])
+            await storage.async_set_alexa_settings(validated_settings)
+        
+        # Save HomeKit bridge
+        if "homekit_entry_id" in msg:
+            entry_id = msg["homekit_entry_id"]
+            if entry_id is not None:
+                hk_manager = _get_homekit_manager(hass)
+                bridge = hk_manager.get_bridge_config(entry_id)
+                if bridge is None:
+                    raise HomeKitError(f"HomeKit bridge not found: {entry_id}")
+            await storage.async_set_homekit_entry_id(entry_id)
+        
+        connection.send_result(msg["id"], {"success": True})
+
+    except ValidationError as err:
+        connection.send_error(msg["id"], "validation_error", str(err))
+    except HomeKitError as err:
+        connection.send_error(msg["id"], "homekit_error", str(err))
+    except Exception as err:
+        _LOGGER.error("Failed to save all: %s", err)
+        connection.send_error(msg["id"], "save_all_error", str(err))
 
 
 # ============ YAML Generation Endpoints ============

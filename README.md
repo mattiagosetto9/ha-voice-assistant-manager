@@ -286,7 +286,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Report a Bug](https://github.com/mattiagosetto9/ha-voice-assistant-manager/issues/new?template=bug_report.md)
 - [Request a Feature](https://github.com/mattiagosetto9/ha-voice-assistant-manager/issues/new?template=feature_request.md)
-- [Discussions](https://github.com/mattiagosetto9/ha-voice-assistant-manager/discussions)
 
 ## Changelog
 

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-02-03
+
+### Added
+
+- **Draft Mode**: All changes are now saved locally in memory before committing
+- **Unsaved Changes Indicator**: Visual warning in footer when changes are pending
+- **Discard Changes Button**: Quick revert to last saved state
+- **Confirmation Dialog**: Warns when switching tabs with unsaved changes
+- **Batch Save Endpoint**: New `save_all` API endpoint saves all configs at once
+
+### Changed
+
+- Entity modifications (domains, overrides, aliases) no longer auto-save
+- Settings changes no longer trigger immediate API calls
+- "Save & Generate" button now saves pending changes before generating files
+- Improved UX: users have explicit control over when changes are persisted
+
+### Fixed
+
+- Prevents accidental data loss from immediate auto-save behavior
+- Reduces unnecessary API calls during bulk editing sessions
+
 ## [1.0.0] - 2026-02-03
 
 ### Added
