@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-03
+
+### Added
+
+- **Smart contextual bulk actions menu**: Shows only relevant actions based on selected entities
+- Visual indicators showing count of affected entities (e.g., "✓ Expose (3)")
+- Emoji icons for quick visual identification of action types
+- Input field now only appears when needed (for set alias action)
+
+### Changed
+
+- **Simplified bulk actions**: Removed confusing prefix/suffix alias options
+- **Set Alias** now sets a complete alias name instead of concatenating with entity name
+- Action labels more intuitive: "Expose/Hide" instead of "Add to/Remove from exclusions"
+- Menu intelligently shows:
+  - "Expose" only for hidden entities
+  - "Hide" only for exposed entities  
+  - "Remove override" only for entities with overrides
+  - "Clear alias" only for entities with aliases
+
+### Removed
+
+- Removed "Add alias prefix" action (confusing and rarely useful)
+- Removed "Add alias suffix" action (confusing and rarely useful)
+
 ## [1.1.1] - 2026-02-03
 
 ### Fixed
