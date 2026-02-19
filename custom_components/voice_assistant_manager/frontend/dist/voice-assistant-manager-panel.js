@@ -1848,7 +1848,6 @@ let VoiceAssistantManagerPanel = class VoiceAssistantManagerPanel extends i {
       </div>
       <div class="header">
         <div class="header-left">
-          <h1>${this._t('title')}</h1>
           <div class="mode-select">
             <label>${this._t('mode')}:</label>
             <select
