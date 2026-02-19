@@ -648,6 +648,16 @@ export class VoiceAssistantManagerPanel extends LitElement {
 
   private async _previewYAML(): Promise<void> {
     try {
+      // Save pending changes first so the preview reflects the current state
+      if (this._hasUnsavedChanges) {
+        const payload = {
+          type: 'voice_assistant_manager/save_all',
+          ...this._buildSavePayload(),
+        };
+        await this.hass.callWS(payload as { type: string; [key: string]: unknown });
+        this._hasUnsavedChanges = false;
+      }
+
       const result = await this.hass.callWS<PreviewContent>({
         type: 'voice_assistant_manager/preview_yaml',
       });

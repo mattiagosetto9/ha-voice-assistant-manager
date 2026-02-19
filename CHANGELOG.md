@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-02-19
+
+### Fixed
+
+- **YAML preview shows stale data**: Preview now saves pending changes to storage before generating the YAML, so it always reflects the current (unsaved) state rather than the last explicitly saved state
+
 ## [1.2.3] - 2026-02-19
 
 ### Fixed
