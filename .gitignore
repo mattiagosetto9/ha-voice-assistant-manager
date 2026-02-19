@@ -133,3 +133,8 @@ tests/
 # Local development
 .local/
 deploy.sh
+
+.claude/
+
+# Logo source (deployed copy is in custom_components/voice_assistant_manager/)
+ha-voice-manager-logo.png
