@@ -1723,17 +1723,11 @@ let VoiceAssistantManagerPanel = class VoiceAssistantManagerPanel extends i {
     }
     async _previewYAML() {
         try {
-            // Save pending changes first so the preview reflects the current state
-            if (this._hasUnsavedChanges) {
-                const payload = {
-                    type: 'voice_assistant_manager/save_all',
-                    ...this._buildSavePayload(),
-                };
-                await this.hass.callWS(payload);
-                this._hasUnsavedChanges = false;
-            }
+            // Send current pending config so the backend generates YAML from it
+            // without persisting anything to storage
             const result = await this.hass.callWS({
                 type: 'voice_assistant_manager/preview_yaml',
+                ...this._buildSavePayload(),
             });
             this._previewContent = result;
             this._previewDialog = true;

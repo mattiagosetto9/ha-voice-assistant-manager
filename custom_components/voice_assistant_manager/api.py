@@ -724,6 +724,34 @@ async def websocket_save_all(
     {
         vol.Required("type"): "voice_assistant_manager/preview_yaml",
         vol.Optional("assistant"): vol.In([ASSISTANT_GOOGLE, ASSISTANT_ALEXA]),
+        # Optional pending config - same shape as save_all.
+        # If provided, YAML is generated from this data without touching storage.
+        vol.Optional("filter_config"): {
+            vol.Optional("filter_mode"): vol.In([FILTER_MODE_EXCLUDE, FILTER_MODE_INCLUDE]),
+            vol.Optional("domains"): [str],
+            vol.Optional("entities"): [str],
+            vol.Optional("devices"): [str],
+            vol.Optional("overrides"): [str],
+        },
+        vol.Optional("google_filter_config"): {
+            vol.Optional("filter_mode"): vol.In([FILTER_MODE_EXCLUDE, FILTER_MODE_INCLUDE]),
+            vol.Optional("domains"): [str],
+            vol.Optional("entities"): [str],
+            vol.Optional("devices"): [str],
+            vol.Optional("overrides"): [str],
+        },
+        vol.Optional("alexa_filter_config"): {
+            vol.Optional("filter_mode"): vol.In([FILTER_MODE_EXCLUDE, FILTER_MODE_INCLUDE]),
+            vol.Optional("domains"): [str],
+            vol.Optional("entities"): [str],
+            vol.Optional("devices"): [str],
+            vol.Optional("overrides"): [str],
+        },
+        vol.Optional("aliases"): {str: str},
+        vol.Optional("google_aliases"): {str: str},
+        vol.Optional("alexa_aliases"): {str: str},
+        vol.Optional("google_settings"): dict,
+        vol.Optional("alexa_settings"): dict,
     }
 )
 @websocket_api.async_response
@@ -732,31 +760,83 @@ async def websocket_preview_yaml(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Preview generated YAML without writing to files."""
+    """Preview generated YAML without writing to files.
+
+    If pending config fields are included in the message, YAML is generated
+    from those values without persisting anything to storage.
+    """
+    import copy
+
     try:
         storage = _get_storage(hass)
         generator = YAMLGenerator(hass, storage)
 
-        assistant = msg.get("assistant")
-        result = {}
+        # Check if the frontend sent pending (unsaved) config for preview
+        preview_keys = {
+            "filter_config", "google_filter_config", "alexa_filter_config",
+            "aliases", "google_aliases", "alexa_aliases",
+            "google_settings", "alexa_settings",
+        }
+        has_pending = any(k in msg for k in preview_keys)
 
-        if assistant is None or assistant == ASSISTANT_GOOGLE:
-            google_yaml, google_warnings = generator.generate_google_yaml()
-            result["google"] = {
-                "yaml": google_yaml,
-                "warnings": google_warnings,
-                "complete": storage.is_google_complete(),
-            }
+        original_data = None
+        if has_pending:
+            # Temporarily apply pending config in-memory; never written to disk
+            original_data = copy.deepcopy(storage._data)
+            if "filter_config" in msg:
+                storage._data["filter_config"] = validate_filter_config(msg["filter_config"])
+            if "google_filter_config" in msg:
+                storage._data["google_filter_config"] = validate_filter_config(msg["google_filter_config"])
+            if "alexa_filter_config" in msg:
+                storage._data["alexa_filter_config"] = validate_filter_config(msg["alexa_filter_config"])
+            if "aliases" in msg:
+                storage._data["aliases"] = {
+                    validate_entity_id(k): validate_alias(v)
+                    for k, v in msg["aliases"].items()
+                    if validate_alias(v)
+                }
+            if "google_aliases" in msg:
+                storage._data["google_aliases"] = {
+                    validate_entity_id(k): validate_alias(v)
+                    for k, v in msg["google_aliases"].items()
+                    if validate_alias(v)
+                }
+            if "alexa_aliases" in msg:
+                storage._data["alexa_aliases"] = {
+                    validate_entity_id(k): validate_alias(v)
+                    for k, v in msg["alexa_aliases"].items()
+                    if validate_alias(v)
+                }
+            if "google_settings" in msg:
+                storage._data["google_settings"] = validate_google_settings(msg["google_settings"])
+            if "alexa_settings" in msg:
+                storage._data["alexa_settings"] = validate_alexa_settings(msg["alexa_settings"])
 
-        if assistant is None or assistant == ASSISTANT_ALEXA:
-            alexa_yaml, alexa_warnings = generator.generate_alexa_yaml()
-            result["alexa"] = {
-                "yaml": alexa_yaml,
-                "warnings": alexa_warnings,
-                "complete": storage.is_alexa_complete(),
-            }
+        try:
+            assistant = msg.get("assistant")
+            result = {}
 
-        connection.send_result(msg["id"], result)
+            if assistant is None or assistant == ASSISTANT_GOOGLE:
+                google_yaml, google_warnings = generator.generate_google_yaml()
+                result["google"] = {
+                    "yaml": google_yaml,
+                    "warnings": google_warnings,
+                    "complete": storage.is_google_complete(),
+                }
+
+            if assistant is None or assistant == ASSISTANT_ALEXA:
+                alexa_yaml, alexa_warnings = generator.generate_alexa_yaml()
+                result["alexa"] = {
+                    "yaml": alexa_yaml,
+                    "warnings": alexa_warnings,
+                    "complete": storage.is_alexa_complete(),
+                }
+
+            connection.send_result(msg["id"], result)
+        finally:
+            # Always restore original storage data after temporary override
+            if original_data is not None:
+                storage._data = original_data
 
     except Exception as err:
         _LOGGER.error("Failed to preview YAML: %s", err)
