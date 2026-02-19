@@ -154,7 +154,7 @@ async def _async_register_panel(hass: HomeAssistant) -> None:
                 "name": "voice-assistant-manager-panel",
                 "embed_iframe": False,
                 "trust_external": False,
-                "module_url": f"/api/{DOMAIN}/voice-assistant-manager-panel.js",
+                "module_url": f"/api/{DOMAIN}/voice-assistant-manager-panel.js?v={VERSION}",
             }
         },
         require_admin=True,  # Security: Only admin users can access

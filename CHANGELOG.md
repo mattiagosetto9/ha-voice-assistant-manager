@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-02-19
+
+### Fixed
+
+- **Browser cache**: Frontend JS URL now includes version number (`?v=1.2.2`), ensuring the browser always loads the correct bundle after an update without requiring a manual cache clear
+
 ## [1.2.1] - 2026-02-19
 
 ### Fixed

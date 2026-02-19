@@ -2,7 +2,7 @@
 from typing import Final
 
 DOMAIN: Final = "voice_assistant_manager"
-VERSION: Final = "1.2.1"
+VERSION: Final = "1.2.2"
 
 # Storage
 STORAGE_KEY: Final = "voice_assistant_manager"
