@@ -665,15 +665,27 @@ async def websocket_save_all(
             validated_config = validate_filter_config(msg["homekit_filter_config"])
             await storage.async_set_filter_config(validated_config, ASSISTANT_HOMEKIT)
 
-        # Save aliases
+        # Save aliases - use replace semantics so deleted aliases are actually removed
         if "aliases" in msg:
-            await storage.async_set_aliases_bulk(msg["aliases"], None)
+            validated = {
+                validate_entity_id(k): validate_alias(v)
+                for k, v in msg["aliases"].items()
+            }
+            await storage.async_replace_aliases(validated, None)
 
         if "google_aliases" in msg:
-            await storage.async_set_aliases_bulk(msg["google_aliases"], ASSISTANT_GOOGLE)
+            validated = {
+                validate_entity_id(k): validate_alias(v)
+                for k, v in msg["google_aliases"].items()
+            }
+            await storage.async_replace_aliases(validated, ASSISTANT_GOOGLE)
 
         if "alexa_aliases" in msg:
-            await storage.async_set_aliases_bulk(msg["alexa_aliases"], ASSISTANT_ALEXA)
+            validated = {
+                validate_entity_id(k): validate_alias(v)
+                for k, v in msg["alexa_aliases"].items()
+            }
+            await storage.async_replace_aliases(validated, ASSISTANT_ALEXA)
 
         # Save settings
         if "google_settings" in msg:

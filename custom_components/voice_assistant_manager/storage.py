@@ -497,6 +497,32 @@ class VoiceAssistantManagerStorage:
 
         await self.async_save()
 
+    async def async_replace_aliases(
+        self,
+        aliases: dict[str, str],
+        assistant: str | None = None,
+    ) -> None:
+        """Replace all aliases at once (substitution, not merge).
+
+        Unlike async_set_aliases_bulk which merges with existing aliases,
+        this method fully replaces the alias dict for the given assistant.
+
+        Args:
+            aliases: Dictionary mapping entity IDs to aliases (pre-validated, empty values excluded).
+            assistant: The assistant type or None for linked mode.
+        """
+        from .validators import validate_assistant
+
+        validated_assistant = validate_assistant(assistant)
+
+        if self.mode == MODE_LINKED or validated_assistant is None:
+            self._data["aliases"] = {k: v for k, v in aliases.items() if v}
+        else:
+            key = f"{validated_assistant}_aliases"
+            self._data[key] = {k: v for k, v in aliases.items() if v}
+
+        await self.async_save()
+
     # ============ Settings Methods ============
 
     def get_google_settings(self) -> dict[str, Any]:

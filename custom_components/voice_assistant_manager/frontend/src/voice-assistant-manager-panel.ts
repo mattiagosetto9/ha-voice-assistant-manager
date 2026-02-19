@@ -537,52 +537,44 @@ export class VoiceAssistantManagerPanel extends LitElement {
     this._bulkActionValue = '';
   }
 
+  private _buildSavePayload(): Record<string, unknown> {
+    const payload: Record<string, unknown> = {};
+    const isLinked = this._state?.mode === 'linked';
+
+    if (isLinked) {
+      // Linked mode: only shared config
+      if (this._pendingFilterConfig) payload.filter_config = this._pendingFilterConfig;
+      if (this._pendingAliases) payload.aliases = this._pendingAliases;
+    } else {
+      // Separate mode: only per-assistant configs
+      if (this._pendingGoogleFilterConfig) payload.google_filter_config = this._pendingGoogleFilterConfig;
+      if (this._pendingAlexaFilterConfig) payload.alexa_filter_config = this._pendingAlexaFilterConfig;
+      if (this._pendingHomekitFilterConfig) payload.homekit_filter_config = this._pendingHomekitFilterConfig;
+      if (this._pendingGoogleAliases) payload.google_aliases = this._pendingGoogleAliases;
+      if (this._pendingAlexaAliases) payload.alexa_aliases = this._pendingAlexaAliases;
+    }
+
+    // Settings (always)
+    if (this._pendingGoogleSettings) payload.google_settings = this._pendingGoogleSettings;
+    if (this._pendingAlexaSettings) payload.alexa_settings = this._pendingAlexaSettings;
+
+    // HomeKit bridge (only if changed)
+    const currentBridge = this._state?.homekit_entry_id || '';
+    if (this._pendingHomekitBridge !== currentBridge) {
+      payload.homekit_entry_id = this._pendingHomekitBridge || null;
+    }
+
+    return payload;
+  }
+
   private async _saveAllSettings(): Promise<void> {
     this._saving = true;
     try {
-      const payload: Record<string, unknown> = {
+      const payload = {
         type: 'voice_assistant_manager/save_all',
+        ...this._buildSavePayload(),
       };
-      
-      // Add filter configs
-      if (this._pendingFilterConfig) {
-        payload.filter_config = this._pendingFilterConfig;
-      }
-      if (this._pendingGoogleFilterConfig) {
-        payload.google_filter_config = this._pendingGoogleFilterConfig;
-      }
-      if (this._pendingAlexaFilterConfig) {
-        payload.alexa_filter_config = this._pendingAlexaFilterConfig;
-      }
-      if (this._pendingHomekitFilterConfig) {
-        payload.homekit_filter_config = this._pendingHomekitFilterConfig;
-      }
-      
-      // Add aliases
-      if (this._pendingAliases) {
-        payload.aliases = this._pendingAliases;
-      }
-      if (this._pendingGoogleAliases) {
-        payload.google_aliases = this._pendingGoogleAliases;
-      }
-      if (this._pendingAlexaAliases) {
-        payload.alexa_aliases = this._pendingAlexaAliases;
-      }
-      
-      // Add settings
-      if (this._pendingGoogleSettings) {
-        payload.google_settings = this._pendingGoogleSettings;
-      }
-      if (this._pendingAlexaSettings) {
-        payload.alexa_settings = this._pendingAlexaSettings;
-      }
-      
-      // Add HomeKit bridge
-      const currentBridge = this._state?.homekit_entry_id || '';
-      if (this._pendingHomekitBridge !== currentBridge) {
-        payload.homekit_entry_id = this._pendingHomekitBridge || null;
-      }
-      
+
       await this.hass.callWS(payload as { type: string; [key: string]: unknown });
       await this._loadState();
       this._hasUnsavedChanges = false;
@@ -672,49 +664,11 @@ export class VoiceAssistantManagerPanel extends LitElement {
     try {
       // First, save all pending changes if any
       if (this._hasUnsavedChanges) {
-        const payload: Record<string, unknown> = {
+        const payload = {
           type: 'voice_assistant_manager/save_all',
+          ...this._buildSavePayload(),
         };
-        
-        // Add filter configs
-        if (this._pendingFilterConfig) {
-          payload.filter_config = this._pendingFilterConfig;
-        }
-        if (this._pendingGoogleFilterConfig) {
-          payload.google_filter_config = this._pendingGoogleFilterConfig;
-        }
-        if (this._pendingAlexaFilterConfig) {
-          payload.alexa_filter_config = this._pendingAlexaFilterConfig;
-        }
-        if (this._pendingHomekitFilterConfig) {
-          payload.homekit_filter_config = this._pendingHomekitFilterConfig;
-        }
-        
-        // Add aliases
-        if (this._pendingAliases) {
-          payload.aliases = this._pendingAliases;
-        }
-        if (this._pendingGoogleAliases) {
-          payload.google_aliases = this._pendingGoogleAliases;
-        }
-        if (this._pendingAlexaAliases) {
-          payload.alexa_aliases = this._pendingAlexaAliases;
-        }
-        
-        // Add settings
-        if (this._pendingGoogleSettings) {
-          payload.google_settings = this._pendingGoogleSettings;
-        }
-        if (this._pendingAlexaSettings) {
-          payload.alexa_settings = this._pendingAlexaSettings;
-        }
-        
-        // Add HomeKit bridge
-        const currentBridge = this._state?.homekit_entry_id || '';
-        if (this._pendingHomekitBridge !== currentBridge) {
-          payload.homekit_entry_id = this._pendingHomekitBridge || null;
-        }
-        
+
         await this.hass.callWS(payload as { type: string; [key: string]: unknown });
         this._hasUnsavedChanges = false;
       }

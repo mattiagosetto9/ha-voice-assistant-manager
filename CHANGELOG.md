@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-02-19
+
+### Fixed
+
+- **Critical**: Fixed configuration being wiped (whitened) when saving in linked mode
+  - `save_all` was sending all per-assistant filter configs even in linked mode, causing them to overwrite the shared `filter_config`
+  - Frontend now sends only `filter_config`/`aliases` in linked mode, and only per-assistant configs in separate mode
+- **Critical**: Fixed alias deletion not persisting via `save_all`
+  - `async_set_aliases_bulk` used `.update()` (merge), so deleted aliases were never removed
+  - `save_all` now uses `async_replace_aliases` which replaces the alias dict entirely
+- Extracted `_buildSavePayload()` helper to eliminate duplicated payload logic between "Save" and "Generate Files"
+
 ## [1.2.0] - 2026-02-03
 
 ### Added
