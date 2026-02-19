@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.8] - 2026-02-19
+
+### Fixed
+
+- **Mobile: missing top app bar**: Added `ha-menu-button` + panel title bar on mobile, matching the standard HA topbar style shown by other panels (e.g. File Editor). Previously the panel rendered content directly without a header, leaving no burger menu visible
+
 ## [1.2.7] - 2026-02-19
 
 ### Fixed

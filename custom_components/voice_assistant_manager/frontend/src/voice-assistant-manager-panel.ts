@@ -116,10 +116,34 @@ export class VoiceAssistantManagerPanel extends LitElement {
         max-width: 100%;
       }
 
+      .mobile-app-header {
+        display: none;
+      }
+
       @media (max-width: 768px) {
         :host {
           padding: 8px;
         }
+
+        .mobile-app-header {
+          display: flex;
+          align-items: center;
+          height: 56px;
+          background: var(--app-header-background-color, var(--primary-color));
+          color: var(--app-header-text-color, white);
+          margin: -8px -8px 8px;
+          padding-right: 8px;
+        }
+
+        .mobile-app-header-title {
+          font-size: 20px;
+          font-weight: 400;
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
 
         .filters {
           padding: 12px;
@@ -770,6 +794,10 @@ export class VoiceAssistantManagerPanel extends LitElement {
     const filterMode = filterConfig.filter_mode || 'exclude';
 
     return html`
+      <div class="mobile-app-header">
+        <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>
+        <div class="mobile-app-header-title">${this._t('title')}</div>
+      </div>
       <div class="header">
         <div class="header-left">
           <h1>${this._t('title')}</h1>
