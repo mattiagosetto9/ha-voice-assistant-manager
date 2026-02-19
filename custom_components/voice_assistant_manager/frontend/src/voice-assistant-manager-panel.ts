@@ -111,6 +111,9 @@ export class VoiceAssistantManagerPanel extends LitElement {
       :host {
         display: block;
         padding: 16px;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        max-width: 100%;
       }
 
       @media (max-width: 768px) {

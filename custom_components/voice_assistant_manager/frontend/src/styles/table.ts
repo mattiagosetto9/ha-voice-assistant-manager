@@ -5,13 +5,15 @@ import { css } from 'lit';
  */
 export const tableStyles = css`
   .entity-table-container {
-    overflow: hidden;
+    min-width: 0;
   }
 
   .table-scroll {
     overflow-x: auto;
-    max-height: 500px;
     overflow-y: auto;
+    max-height: 500px;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
   }
 
   .entity-table {

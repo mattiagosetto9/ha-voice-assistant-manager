@@ -686,13 +686,15 @@ const cardStyles = i$3 `
  */
 const tableStyles = i$3 `
   .entity-table-container {
-    overflow: hidden;
+    min-width: 0;
   }
 
   .table-scroll {
     overflow-x: auto;
-    max-height: 500px;
     overflow-y: auto;
+    max-height: 500px;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
   }
 
   .entity-table {
@@ -915,6 +917,7 @@ const filterStyles = i$3 `
 
   .filter-toggles {
     display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     align-items: center;
   }
@@ -937,6 +940,7 @@ const filterStyles = i$3 `
 const bulkActionsStyles = i$3 `
   .bulk-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
@@ -1179,6 +1183,7 @@ const footerStyles = i$3 `
 
   .footer-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
   }
 `;
@@ -2684,6 +2689,9 @@ VoiceAssistantManagerPanel.styles = [
       :host {
         display: block;
         padding: 16px;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        max-width: 100%;
       }
 
       @media (max-width: 768px) {

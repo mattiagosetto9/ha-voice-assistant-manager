@@ -41,6 +41,7 @@ export const filterStyles = css`
 
   .filter-toggles {
     display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     align-items: center;
   }
@@ -64,6 +65,7 @@ export const filterStyles = css`
 export const bulkActionsStyles = css`
   .bulk-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
     padding: 12px 16px;

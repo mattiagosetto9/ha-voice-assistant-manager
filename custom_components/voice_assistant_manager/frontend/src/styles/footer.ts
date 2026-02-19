@@ -22,6 +22,7 @@ export const footerStyles = css`
 
   .footer-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
   }
 `;
