@@ -99,6 +99,29 @@ def _get_storage(hass: HomeAssistant):
     return hass.data[DOMAIN]["storage"]
 
 
+def _get_known_entity_ids(hass: HomeAssistant) -> set[str]:
+    """Return all entity IDs known to HA (registry + current states)."""
+    registry = er.async_get(hass)
+    return set(registry.entities) | set(hass.states.async_entity_ids())
+
+
+def _prune_filter_config(hass: HomeAssistant, config: dict) -> dict:
+    """Return config with entity IDs that no longer exist removed."""
+    known = _get_known_entity_ids(hass)
+    pruned = dict(config)
+    if "entities" in pruned:
+        pruned["entities"] = [e for e in pruned["entities"] if e in known]
+    if "overrides" in pruned:
+        pruned["overrides"] = [e for e in pruned["overrides"] if e in known]
+    return pruned
+
+
+def _prune_aliases(hass: HomeAssistant, aliases: dict[str, str]) -> dict[str, str]:
+    """Return aliases with entity IDs that no longer exist removed."""
+    known = _get_known_entity_ids(hass)
+    return {k: v for k, v in aliases.items() if k in known}
+
+
 def _get_homekit_manager(hass: HomeAssistant) -> HomeKitManager:
     """Get or create the HomeKit manager instance."""
     if "homekit_manager" not in hass.data[DOMAIN]:
@@ -648,43 +671,44 @@ async def websocket_save_all(
     try:
         storage = _get_storage(hass)
 
-        # Save filter configs
+        # Save filter configs (prune entity IDs that no longer exist in HA)
         if "filter_config" in msg:
-            validated_config = validate_filter_config(msg["filter_config"])
+            validated_config = _prune_filter_config(hass, validate_filter_config(msg["filter_config"]))
             await storage.async_set_filter_config(validated_config, None)
 
         if "google_filter_config" in msg:
-            validated_config = validate_filter_config(msg["google_filter_config"])
+            validated_config = _prune_filter_config(hass, validate_filter_config(msg["google_filter_config"]))
             await storage.async_set_filter_config(validated_config, ASSISTANT_GOOGLE)
 
         if "alexa_filter_config" in msg:
-            validated_config = validate_filter_config(msg["alexa_filter_config"])
+            validated_config = _prune_filter_config(hass, validate_filter_config(msg["alexa_filter_config"]))
             await storage.async_set_filter_config(validated_config, ASSISTANT_ALEXA)
 
         if "homekit_filter_config" in msg:
-            validated_config = validate_filter_config(msg["homekit_filter_config"])
+            validated_config = _prune_filter_config(hass, validate_filter_config(msg["homekit_filter_config"]))
             await storage.async_set_filter_config(validated_config, ASSISTANT_HOMEKIT)
 
         # Save aliases - use replace semantics so deleted aliases are actually removed
+        # Also prune aliases for entities that no longer exist
         if "aliases" in msg:
-            validated = {
+            validated = _prune_aliases(hass, {
                 validate_entity_id(k): validate_alias(v)
                 for k, v in msg["aliases"].items()
-            }
+            })
             await storage.async_replace_aliases(validated, None)
 
         if "google_aliases" in msg:
-            validated = {
+            validated = _prune_aliases(hass, {
                 validate_entity_id(k): validate_alias(v)
                 for k, v in msg["google_aliases"].items()
-            }
+            })
             await storage.async_replace_aliases(validated, ASSISTANT_GOOGLE)
 
         if "alexa_aliases" in msg:
-            validated = {
+            validated = _prune_aliases(hass, {
                 validate_entity_id(k): validate_alias(v)
                 for k, v in msg["alexa_aliases"].items()
-            }
+            })
             await storage.async_replace_aliases(validated, ASSISTANT_ALEXA)
 
         # Save settings
@@ -784,29 +808,29 @@ async def websocket_preview_yaml(
             # Temporarily apply pending config in-memory; never written to disk
             original_data = copy.deepcopy(storage._data)
             if "filter_config" in msg:
-                storage._data["filter_config"] = validate_filter_config(msg["filter_config"])
+                storage._data["filter_config"] = _prune_filter_config(hass, validate_filter_config(msg["filter_config"]))
             if "google_filter_config" in msg:
-                storage._data["google_filter_config"] = validate_filter_config(msg["google_filter_config"])
+                storage._data["google_filter_config"] = _prune_filter_config(hass, validate_filter_config(msg["google_filter_config"]))
             if "alexa_filter_config" in msg:
-                storage._data["alexa_filter_config"] = validate_filter_config(msg["alexa_filter_config"])
+                storage._data["alexa_filter_config"] = _prune_filter_config(hass, validate_filter_config(msg["alexa_filter_config"]))
             if "aliases" in msg:
-                storage._data["aliases"] = {
+                storage._data["aliases"] = _prune_aliases(hass, {
                     validate_entity_id(k): validate_alias(v)
                     for k, v in msg["aliases"].items()
                     if validate_alias(v)
-                }
+                })
             if "google_aliases" in msg:
-                storage._data["google_aliases"] = {
+                storage._data["google_aliases"] = _prune_aliases(hass, {
                     validate_entity_id(k): validate_alias(v)
                     for k, v in msg["google_aliases"].items()
                     if validate_alias(v)
-                }
+                })
             if "alexa_aliases" in msg:
-                storage._data["alexa_aliases"] = {
+                storage._data["alexa_aliases"] = _prune_aliases(hass, {
                     validate_entity_id(k): validate_alias(v)
                     for k, v in msg["alexa_aliases"].items()
                     if validate_alias(v)
-                }
+                })
             if "google_settings" in msg:
                 storage._data["google_settings"] = validate_google_settings(msg["google_settings"])
             if "alexa_settings" in msg:

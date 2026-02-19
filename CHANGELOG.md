@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.10] - 2026-02-19
+
+### Fixed
+
+- **Stale entity cleanup on save and preview**: Entity IDs that no longer exist in HA (removed integrations/devices) are now automatically stripped from `entities`, `overrides`, and `aliases` at save time and during YAML preview, so deleted entities never appear in generated configs
+
 ## [1.2.9] - 2026-02-19
 
 ### Changed
