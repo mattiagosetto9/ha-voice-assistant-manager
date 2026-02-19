@@ -165,12 +165,13 @@ class HomeKitManager:
         except Exception as err:
             raise HomeKitError(f"Failed to update HomeKit entry: {err}") from err
 
-        # Reload the integration to apply changes
-        try:
-            await self.hass.config_entries.async_reload(entry_id)
-            _LOGGER.info("Reloaded HomeKit bridge %s", entry.title)
-        except Exception as err:
-            _LOGGER.warning("Failed to reload HomeKit bridge: %s", err)
+        # Schedule reload in background so callers don't block waiting for HomeKit
+        # to restart (which can hang if the port is temporarily in use)
+        self.hass.async_create_task(
+            self.hass.config_entries.async_reload(entry_id),
+            "voice_assistant_manager_homekit_reload",
+        )
+        _LOGGER.info("HomeKit bridge %s reload scheduled", entry.title)
             # Don't raise - config was saved, reload might fail temporarily
 
     async def async_sync_from_voice_assistant_manager(self) -> dict[str, Any]:
